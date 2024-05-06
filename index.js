@@ -97,8 +97,8 @@ const battle = (hero1, hero2) => {
     const hero2Attack = hero2.attack;
     const hero1Hp = hero1.hp;
     const hero2Hp = hero2.hp;
-    var hero1CountAtacks = 0;
-    var hero2CountAtacks = 0;
+    let hero1CountAtacks = 0;
+    let hero2CountAtacks = 0;
     let hero1Turn = true;
     let hero1CurrentHp = hero1Hp;
     let hero2CurrentHp = hero2Hp;
@@ -115,8 +115,10 @@ const battle = (hero1, hero2) => {
         hero1Turn = !hero1Turn;
     }
     if (hero1CurrentHp > 0) {
+        pool.query('UPDATE heroes SET level = $1 WHERE id = $2 RETURNING *', [hero1.level + 1, hero1.id]);
         return { hero: hero1, countAtacks: hero1CountAtacks };
     } else {
+        pool.query('UPDATE heroes SET level = $1 WHERE id = $2 RETURNING *', [hero2.level + 1, hero2.id]);
         return { hero: hero2, countAtacks: hero2CountAtacks };
     }
 };
