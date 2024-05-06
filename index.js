@@ -123,6 +123,19 @@ const battle = (hero1, hero2) => {
     }
 };
 
+app.get('/battles', async (req, res) => {
+    try {
+        const battles = await pool.query('SELECT * FROM battles');
+        res.json({
+            total: battles.rowCount,
+            battles: battles.rows,
+        });
+    } catch (error) {
+        console.error('Erro ao buscar batalhas', error);
+        res.status(500).send('Erro ao buscar batalhas');
+    }
+});
+
 app.get('/battles/:heroi1/:heroi2', async (req, res) => {
     try {
         const { heroi1, heroi2 } = req.params;
@@ -132,16 +145,13 @@ app.get('/battles/:heroi1/:heroi2', async (req, res) => {
             res.status(404).json({ message: 'Heroi não encontrado' });
         } else {
             const winner = battle(hero1.rows[0], hero2.rows[0]);
+            pool.query('INSERT INTO battles (hero1_id, hero2_id, winner_id, message) VALUES ($1, $2, $3, $4)', [hero1.rows[0].id, hero2.rows[0].id, winner.winner.id, 'Batalha finalizada']);
             res.json({
                 winner: winner.hero,
                 golpes: winner.countAtacks,
                 message: 'Batalha finalizada',
             });
         }
-
-
-
-
     } catch (error) {
         console.error('Erro ao buscar batalha', error);
         res.status(500).send('Erro ao buscar batalha');

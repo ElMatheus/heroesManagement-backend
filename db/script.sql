@@ -16,3 +16,14 @@ INSERT INTO heroes (name, level, power, hp, attack) VALUES ('Homem de Ferro', 1,
 INSERT INTO heroes (name, level, power, hp, attack) VALUES ('Mulher Maravilha', 1, 'Laço da verdade', 150, 145);
 INSERT INTO heroes (name, level, power, hp, attack) VALUES ('Flash', 1, 'Velocidade', 155, 110);
 INSERT INTO heroes (name, level, power, hp, attack) VALUES ('Hulk', 1, 'Super Forca', 150, 150);
+
+CREATE TABLE IF NOT EXISTS battles (
+  id SERIAL PRIMARY KEY,
+  hero1_id INT NOT NULL,
+  hero2_id INT NOT NULL,
+  winner_id INT NOT NULL,
+  message TEXT NOT NULL,
+  FOREIGN KEY (hero1_id) REFERENCES heroes(id),
+  FOREIGN KEY (hero2_id) REFERENCES heroes(id),
+  FOREIGN KEY (winner_id) REFERENCES heroes(id)
+);
