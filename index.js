@@ -44,6 +44,20 @@ app.get('/heroes/:id', async (req, res) => {
     }
 });
 
+app.get('/heroes/name/:name', async (req, res) => {
+    try {
+        const { name } = req.params;
+        const result = await pool.query('SELECT * FROM heroes WHERE name = $1', [name]);
+        if (result.rowCount === 0) {
+            res.status(404).json({ message: 'Heroi não encontrado' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar heroi', error);
+        res.status(500).send('Erro ao buscar heroi');
+    }
+});
+
 app.post('/heroes', async (req, res) => {
     try {
         const { name, power, hp, attack } = req.body;
@@ -116,16 +130,37 @@ const battle = (hero1, hero2) => {
     }
     if (hero1CurrentHp > 0) {
         pool.query('UPDATE heroes SET level = $1 WHERE id = $2 RETURNING *', [hero1.level + 1, hero1.id]);
-        return { hero: hero1, countAtacks: hero1CountAtacks };
+        return { heroW: hero1, heroD: hero2, countAtacks: hero1CountAtacks };
     } else {
         pool.query('UPDATE heroes SET level = $1 WHERE id = $2 RETURNING *', [hero2.level + 1, hero2.id]);
-        return { hero: hero2, countAtacks: hero2CountAtacks };
+        return { heroW: hero2, heroD: hero2, countAtacks: hero2CountAtacks };
     }
+};
+
+const generateMessageBattle = (winner, countAtacks, loser) => {
+    return `${winner.name} venceu a batalha com ${countAtacks} golpes, ${loser.name} foi derrotado`;
 };
 
 app.get('/battles', async (req, res) => {
     try {
-        const battles = await pool.query('SELECT * FROM battles');
+        const battles = await pool.query('SELECT battles.id AS id_batalha, hero1.name AS nome_heroi1, hero1.level AS level_heroi1, hero1.power AS poder_heroi1, hero1.hp AS hp_heroi1, hero1.attack AS attack_heroi1, hero2.name AS nome_heroi2, hero2.level AS level_heroi2, hero2.power AS poder_heroi2, hero2.hp AS hp_heroi2, hero2.attack AS attack_heroi2,winner.name AS heroi_vencedor, battles.message AS mensagem FROM battles INNER JOIN heroes AS hero1 ON hero1.id = battles.hero1_id INNER JOIN heroes AS hero2 ON hero2.id = battles.hero2_id INNER JOIN heroes AS winner ON winner.id = battles.winner_id;');
+        res.json({
+            total: battles.rowCount,
+            battles: battles.rows,
+        });
+    } catch (error) {
+        console.error('Erro ao buscar batalhas', error);
+        res.status(500).send('Erro ao buscar batalhas');
+    }
+});
+
+app.get('/battles/name/:name', async (req, res) => {
+    try {
+        const { name } = req.params;
+        const battles = await pool.query('SELECT battles.id AS id_batalha, hero1.name AS nome_heroi1, hero1.level AS level_heroi1, hero1.power AS poder_heroi1, hero1.hp AS hp_heroi1, hero1.attack AS attack_heroi1, hero2.name AS nome_heroi2, hero2.level AS level_heroi2, hero2.power AS poder_heroi2, hero2.hp AS hp_heroi2, hero2.attack AS attack_heroi2,winner.name AS heroi_vencedor, battles.message AS mensagem FROM battles INNER JOIN heroes AS hero1 ON hero1.id = battles.hero1_id INNER JOIN heroes AS hero2 ON hero2.id = battles.hero2_id INNER JOIN heroes AS winner ON winner.id = battles.winner_id WHERE hero1.name = $1 OR hero2.name = $1;', [name]);
+        if (battles.rowCount === 0) {
+            res.status(404).json({ message: 'Heroi ainda não batalhou!' });
+        }
         res.json({
             total: battles.rowCount,
             battles: battles.rows,
@@ -141,20 +176,21 @@ app.get('/battles/:heroi1/:heroi2', async (req, res) => {
         const { heroi1, heroi2 } = req.params;
         const hero1 = await pool.query('SELECT * FROM heroes WHERE id = $1', [heroi1]);
         const hero2 = await pool.query('SELECT * FROM heroes WHERE id = $1', [heroi2]);
-        if (hero1.rowCount === 0 || hero2.rowCount === 0) {
+        if (hero1.rowCount === 0 || hero2.rowCount === 0) { 
             res.status(404).json({ message: 'Heroi não encontrado' });
         } else {
+            console.log(hero1.rows[0], hero2.rows[0]);
             const winner = battle(hero1.rows[0], hero2.rows[0]);
-            pool.query('INSERT INTO battles (hero1_id, hero2_id, winner_id, message) VALUES ($1, $2, $3, $4)', [hero1.rows[0].id, hero2.rows[0].id, winner.winner.id, 'Batalha finalizada']);
+            pool.query('INSERT INTO battles (hero1_id, hero2_id, winner_id, message) VALUES ($1, $2, $3, $4)', [hero1.rows[0].id, hero2.rows[0].id, winner.heroW.id, generateMessageBattle(winner.heroW, winner.countAtacks, winner.heroD)]);
             res.json({
-                winner: winner.hero,
+                winner: winner.heroW,
                 golpes: winner.countAtacks,
                 message: 'Batalha finalizada',
             });
         }
     } catch (error) {
-        console.error('Erro ao buscar batalha', error);
-        res.status(500).send('Erro ao buscar batalha');
+        console.error('Erro ao batalhar', error);
+        res.status(500).send('Erro ao batalhar');
     }
 });
 

@@ -27,3 +27,4 @@ CREATE TABLE IF NOT EXISTS battles (
   FOREIGN KEY (hero2_id) REFERENCES heroes(id),
   FOREIGN KEY (winner_id) REFERENCES heroes(id)
 );
+
